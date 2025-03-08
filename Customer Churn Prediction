@@ -1,0 +1,117 @@
+!pip install xgboost
+import xgboost as xgb
+print(xgb.__version__)
+#Import Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
+#Load and Explore the Data
+df = pd.read_csv("Telco-Customer-Churn.csv")  
+df
+df.head()
+df.tail()
+df.shape
+df.columns
+df.info()
+df.isna()
+df.isna().sum()
+print(df.describe())
+#Perform data Visualization
+#BAR CHART
+df['Churn'] = df['Churn'].map({'Yes': 1, 'No': 0})
+churn_counts = df[df["Churn"] == 1]["Contract"].value_counts()
+# Rename index for better readability (optional, modify based on actual contract names)
+churn_counts.index = ['Month-to-Month', 'One Year', 'Two Year']
+# Plot the bar chart
+churn_counts.plot(kind='bar', color='Green')
+# Labels and title
+plt.title("Churn Rate by Contract Type")
+plt.xlabel("Contract Type")
+plt.ylabel("Churn Frequency")
+plt.show()
+#PIE CHART
+churn_counts=df["PaymentMethod"].value_counts()
+churn_counts.plot(kind='pie',autopct='%1.1f%%',colors=['skyblue', 'lightcoral', 'gold', 'lightseagreen'])
+plt.title('Payment method')
+plt.axis('equal')
+#HEAT MAP
+contract_mapping = {'Month-to-month': 1, 'One year': 2, 'Two year': 3}
+df['ContractNumeric'] = df['Contract'].map(contract_mapping)
+# Select relevant columns for heatmap
+correlation_data = df[['tenure', 'ContractNumeric']].corr()
+# Plot heatmap
+plt.figure(figsize=(6, 4))
+sns.heatmap(correlation_data, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title("Correlation Heatmap: Tenure vs Contract")
+plt.show()
+#Data Preprocessing
+df.drop("customerID", axis=1, inplace=True)
+# Encode categorical variables
+for col in df.select_dtypes(include=['object']).columns:
+    df[col] = LabelEncoder().fit_transform(df[col])
+X = df.drop("Churn", axis=1)
+y = df["Churn"]
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Standardize numerical features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Feature Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Logistic Regression Model
+# Train Logistic Regression Model
+lr = LogisticRegression()
+lr.fit(X_train, y_train)
+# Make predictions
+y_pred_lr = lr.predict(X_test)
+# Evaluate the model
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+roc_auc_lr = roc_auc_score(y_test, y_pred_lr)
+conf_matrix_lr = confusion_matrix(y_test, y_pred_lr)
+print(f"Logistic Regression Accuracy: {accuracy_lr:.4f}")
+print(f"Logistic Regression ROC-AUC: {roc_auc_lr:.4f}")
+print("Confusion Matrix:\n", conf_matrix_lr)
+#Random Forest Model
+# Train Random Forest Model
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+# Make predictions
+y_pred_rf = rf.predict(X_test)
+# Evaluate the model
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+roc_auc_rf = roc_auc_score(y_test, y_pred_rf)
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
+print(f"Random Forest Accuracy: {accuracy_rf:.4f}")
+print(f"Random Forest ROC-AUC: {roc_auc_rf:.4f}")
+print("Confusion Matrix:\n", conf_matrix_rf)
+#XGBoost Model
+# Train XGBoost Model
+xgb = XGBClassifier(eval_metric="logloss")
+xgb.fit(X_train, y_train)
+# Make predictions
+y_pred_xgb = xgb.predict(X_test)
+# Evaluate the model
+accuracy_xgb = accuracy_score(y_test, y_pred_xgb)
+roc_auc_xgb = roc_auc_score(y_test, y_pred_xgb)
+conf_matrix_xgb = confusion_matrix(y_test, y_pred_xgb)
+print(f"XGBoost Accuracy: {accuracy_xgb:.4f}")
+print(f"XGBoost ROC-AUC: {roc_auc_xgb:.4f}")
+print("Confusion Matrix:\n", conf_matrix_xgb)
+#Model Comparison
+model_results = pd.DataFrame({
+    "Model": ["Logistic Regression", "Random Forest", "XGBoost"],
+    "Accuracy": [accuracy_lr,accuracy_rf,accuracy_xgb],
+    "ROC-AUC": [roc_auc_lr,roc_auc_rf,roc_auc_xgb],
+    "Confusion_matrix": [conf_matrix_lr,conf_matrix_rf,conf_matrix_xgb]
+})
+print(model_results.sort_values(by="Accuracy", ascending=False))
